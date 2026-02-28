@@ -270,8 +270,8 @@ class FaceEnhancer:
             "-i", temp_video,
             "-i", str(audio_source),
             "-c:v", "libx264",
-            "-preset", "medium",
-            "-crf", "18",
+            "-preset", "ultrafast",
+            "-crf", "23",
             "-c:a", "aac",
             "-b:a", "192k",
             "-map", "0:v:0",
@@ -282,7 +282,7 @@ class FaceEnhancer:
 
         mux_result = subprocess.run(
             mux_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-            text=True, timeout=120
+            text=True, timeout=600  # 1920x1080@60fps needs more time
         )
 
         if mux_result.returncode != 0:

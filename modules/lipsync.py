@@ -36,6 +36,38 @@ logger = logging.getLogger(__name__)
 DEFAULT_WAV2LIP_DIR = os.environ.get("WAV2LIP_DIR", "Wav2Lip")
 
 
+def _patch_wav2lip_audio(wav2lip_path: Path):
+    """Patch Wav2Lip audio.py for numpy >= 1.24 and librosa >= 0.10.
+
+    Fixes:
+    - np.float → np.float64  (removed in numpy 1.24)
+    - librosa.filters.mel(sr, n_fft, ...) → mel(sr=sr, n_fft=n_fft, ...)
+      (positional args removed in librosa 0.10)
+    """
+    audio_py = wav2lip_path / "audio.py"
+    if not audio_py.exists():
+        return
+
+    content = audio_py.read_text(encoding="utf-8", errors="ignore")
+    original = content
+
+    # Fix numpy deprecations
+    content = content.replace("np.float)", "np.float64)")
+    content = content.replace("np.float,", "np.float64,")
+
+    # Fix librosa.filters.mel() positional args → keyword args
+    # Old API: librosa.filters.mel(sr, n_fft, n_mels=..., fmin=..., fmax=...)
+    # New API: librosa.filters.mel(sr=sr, n_fft=n_fft, n_mels=..., fmin=..., fmax=...)
+    content = content.replace(
+        "librosa.filters.mel(hp.sample_rate, hp.n_fft,",
+        "librosa.filters.mel(sr=hp.sample_rate, n_fft=hp.n_fft,"
+    )
+
+    if content != original:
+        audio_py.write_text(content, encoding="utf-8")
+        logger.info("Patched Wav2Lip/audio.py for numpy + librosa compatibility")
+
+
 def check_wav2lip_setup(wav2lip_dir: str = DEFAULT_WAV2LIP_DIR) -> dict:
     """Verify Wav2Lip installation and model files.
 
@@ -145,6 +177,12 @@ def run_lipsync(
         FileNotFoundError: If Wav2Lip is not properly set up.
     """
     wav2lip_path = Path(wav2lip_dir).resolve()
+
+    # ── CRITICAL: Patch Wav2Lip audio.py for librosa >= 0.10 ─────────
+    # librosa.filters.mel() removed positional args in 0.10+.
+    # Wav2Lip calls mel(sr, n_fft, ...) which now requires keywords.
+    # We patch the file *before every run* to guarantee it works.
+    _patch_wav2lip_audio(wav2lip_path)
 
     # Validate setup
     status = check_wav2lip_setup(wav2lip_dir)
