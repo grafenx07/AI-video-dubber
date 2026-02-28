@@ -1,0 +1,50 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment
+venv/
+env/
+.env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Output directories
+outputs/
+temp/
+results/
+
+# Model files (too large for git)
+*.pth
+*.pt
+*.bin
+*.ckpt
+*.safetensors
+
+# Wav2Lip clone (setup script handles this)
+Wav2Lip/
+
+# Audio/Video files (too large for git)
+*.mp4
+*.avi
+*.mkv
+*.mov
+*.wav
+*.mp3
+*.flac
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Logs
+*.log
