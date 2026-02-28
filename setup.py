@@ -53,6 +53,32 @@ def install_torch_cuda():
     )
 
 
+def _patch_wav2lip_numpy(wav2lip_dir):
+    """Patch Wav2Lip source files for numpy >= 1.24 compatibility.
+
+    np.float, np.int, np.complex were deprecated in numpy 1.20 and
+    removed in numpy 1.24. Wav2Lip's code uses np.float in audio.py
+    and potentially other files. This patches them to np.float64.
+    """
+    files_to_patch = [
+        wav2lip_dir / "audio.py",
+        wav2lip_dir / "models" / "wav2lip.py",
+        wav2lip_dir / "models" / "wav2lip_gan.py",
+    ]
+
+    for fpath in files_to_patch:
+        if not fpath.exists():
+            continue
+        content = fpath.read_text(encoding="utf-8", errors="ignore")
+        patched = content.replace("np.float)", "np.float64)")
+        patched = patched.replace("np.float,", "np.float64,")
+        patched = patched.replace("np.int)", "np.int64)")
+        patched = patched.replace("np.int,", "np.int64,")
+        if patched != content:
+            fpath.write_text(patched, encoding="utf-8")
+            print(f"  ✅ Patched {fpath} for numpy compatibility")
+
+
 def setup_wav2lip():
     """Clone and configure Wav2Lip."""
     print("\n👄 Setting up Wav2Lip...")
@@ -74,6 +100,10 @@ def setup_wav2lip():
             f"{sys.executable} -m pip install -q -r {wav2lip_reqs}",
             "Installing Wav2Lip dependencies"
         )
+
+    # CRITICAL: Patch Wav2Lip for numpy >= 1.24 compatibility
+    # np.float was removed in numpy 1.24; Wav2Lip's audio.py uses it
+    _patch_wav2lip_numpy(wav2lip_dir)
 
     # Create checkpoints directory
     checkpoints = wav2lip_dir / "checkpoints"

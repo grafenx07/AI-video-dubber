@@ -237,12 +237,18 @@ class FaceEnhancer:
         else:
             # Extract audio from original video
             audio_source = str(Path(output_video).parent / "temp_audio.aac")
-            subprocess.run([
+            extract_result = subprocess.run([
                 "ffmpeg", "-y", "-i", str(input_video),
-                "-vn", "-acodec", "copy", audio_source
+                "-vn", "-acodec", "aac", "-b:a", "192k", audio_source
             ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
+            if extract_result.returncode != 0:
+                logger.warning("Audio extraction failed, trying copy codec...")
+                subprocess.run([
+                    "ffmpeg", "-y", "-i", str(input_video),
+                    "-vn", "-acodec", "copy", audio_source
+                ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
 
-        # Mux
+        # Mux enhanced video + audio
         mux_cmd = [
             "ffmpeg", "-y",
             "-i", temp_video,
@@ -258,10 +264,16 @@ class FaceEnhancer:
             str(output_video)
         ]
 
-        subprocess.run(
+        mux_result = subprocess.run(
             mux_cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             text=True, timeout=120
         )
+
+        if mux_result.returncode != 0:
+            logger.error(f"FFmpeg mux failed: {mux_result.stderr[-500:]}")
+            # Fallback: just use the video without audio re-mux
+            shutil.move(temp_video, str(output_video))
+            logger.warning("Used enhanced video without audio mux as fallback")
 
         # Cleanup
         if Path(temp_video).exists():

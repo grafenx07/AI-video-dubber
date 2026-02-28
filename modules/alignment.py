@@ -4,7 +4,7 @@ Audio Duration Alignment Module
 Ensures generated Hindi audio matches the original video clip duration exactly.
 
 This module is critical for production quality:
-    - Hindi translations are typically 10-20% longer than English
+    - Hindi translations may differ in duration from the Kannada source
     - Even small mismatches cause noticeable lip-sync drift
     - Professional dubbing always time-aligns audio to video
 
@@ -224,6 +224,13 @@ def align_audio_to_video(
     elapsed = time.time() - start_time
     final_duration = get_audio_duration(output_path)
     logger.info(f"Alignment complete in {elapsed:.1f}s — final duration: {final_duration:.2f}s")
+
+    # Ensure the output is clean 16kHz mono WAV for Wav2Lip compatibility.
+    # Wav2Lip internally loads audio at 16kHz, but providing it directly
+    # avoids any resampling artifacts during inference.
+    y_out, sr_out = librosa.load(output_path, sr=16000, mono=True)
+    sf.write(output_path, y_out, 16000)
+    logger.info(f"Resampled aligned audio to 16kHz for Wav2Lip compatibility")
 
     return output_path
 

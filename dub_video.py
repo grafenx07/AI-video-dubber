@@ -128,12 +128,24 @@ def step_2_extract_audio(config: PipelineConfig, logger: logging.Logger) -> str:
     logger.info("STEP 2: Extracting audio from clip")
     logger.info("=" * 60)
 
+    # Extract at 16kHz for Whisper transcription
     audio_path = extract_audio(
         video_path=config.clip_video,
         audio_path=config.clip_audio,
         sample_rate=16000,  # Whisper expects 16kHz
         mono=True
     )
+
+    # Also extract at 22050Hz for XTTS voice cloning reference
+    # (higher sample rate = better voice quality for cloning)
+    config.reference_audio = str(Path(config.output_dir) / "02_reference_22k.wav")
+    extract_audio(
+        video_path=config.clip_video,
+        audio_path=config.reference_audio,
+        sample_rate=22050,  # XTTS native rate
+        mono=True
+    )
+    logger.info(f"  Reference audio for voice cloning: {config.reference_audio}")
 
     return audio_path
 
@@ -203,9 +215,16 @@ def step_5_voice_clone(config: PipelineConfig, logger: logging.Logger, translati
         speech_rate=config.speech_rate
     )
 
+    # Use the 22kHz reference audio for better voice cloning quality.
+    # Falls back to the 16kHz Whisper audio if reference doesn't exist.
+    reference = getattr(config, 'reference_audio', config.clip_audio)
+    if not Path(reference).exists():
+        reference = config.clip_audio
+        logger.warning("22kHz reference not found, using 16kHz audio for voice cloning")
+
     hindi_audio = cloner.synthesize(
         text=translation["full_text"],
-        reference_audio=config.clip_audio,  # Use original speaker as reference
+        reference_audio=reference,
         output_path=config.hindi_audio_raw,
         language="hi"
     )
@@ -546,7 +565,7 @@ Examples:
     parser.add_argument(
         "--speech-rate",
         type=float, default=1.05,
-        help="Speech rate multiplier (default: 1.05, slightly faster for Hindi)"
+        help="Speech rate multiplier (default: 1.05, slight speedup for Hindi sync)"
     )
 
     # Enhancement

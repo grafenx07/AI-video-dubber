@@ -46,7 +46,7 @@ class VoiceCloner:
             method: TTS method — 'xtts' or 'edge' (fallback).
             device: 'cuda' or 'cpu'. Auto-detects if None.
             speech_rate: Speed multiplier. >1.0 = faster, <1.0 = slower.
-                         1.05 is recommended for Hindi (typically longer than English).
+                         1.05 is recommended for Hindi (may differ in length from Kannada).
         """
         self.method = method
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
@@ -259,9 +259,14 @@ class VoiceCloner:
         voice = "hi-IN-SwaraNeural"  # Female
         # Alternative: "hi-IN-MadhurNeural"  # Male
 
+        # Edge TTS outputs MP3 format regardless of file extension.
+        # We save to a temp .mp3 file, then convert to proper WAV
+        # so downstream audio processing (librosa, Wav2Lip) works correctly.
+        temp_mp3 = output_path + ".tmp.mp3"
+
         async def _generate():
             communicate = edge_tts.Communicate(text, voice)
-            await communicate.save(output_path)
+            await communicate.save(temp_mp3)
 
         # Run the async function
         try:
@@ -274,6 +279,25 @@ class VoiceCloner:
                 asyncio.run(_generate())
         except RuntimeError:
             asyncio.run(_generate())
+
+        # Convert MP3 → WAV for downstream compatibility
+        try:
+            from pydub import AudioSegment
+            audio_seg = AudioSegment.from_mp3(temp_mp3)
+            audio_seg.export(output_path, format="wav")
+            logger.info(f"Edge TTS: converted MP3 → WAV ({len(audio_seg)}ms)")
+        except Exception as e:
+            logger.warning(f"pydub MP3→WAV conversion failed ({e}), trying ffmpeg...")
+            import subprocess
+            subprocess.run(
+                ["ffmpeg", "-y", "-i", temp_mp3, "-acodec", "pcm_s16le",
+                 "-ar", "24000", "-ac", "1", output_path],
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=30
+            )
+        finally:
+            import os as _os
+            if _os.path.exists(temp_mp3):
+                _os.remove(temp_mp3)
 
         logger.info(f"Edge TTS output saved: {output_path}")
         return output_path

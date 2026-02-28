@@ -144,7 +144,7 @@ def run_lipsync(
         RuntimeError: If Wav2Lip inference fails.
         FileNotFoundError: If Wav2Lip is not properly set up.
     """
-    wav2lip_path = Path(wav2lip_dir)
+    wav2lip_path = Path(wav2lip_dir).resolve()
 
     # Validate setup
     status = check_wav2lip_setup(wav2lip_dir)
@@ -160,16 +160,24 @@ def run_lipsync(
         checkpoint_path = status["best_model"]
         logger.warning(f"Requested model {model_name} not found, using: {checkpoint_path}")
 
-    Path(output_path).parent.mkdir(parents=True, exist_ok=True)
+    # CRITICAL: Convert ALL paths to absolute before passing to subprocess.
+    # Wav2Lip inference.py runs with cwd=Wav2Lip/, so relative paths would
+    # resolve from inside the Wav2Lip directory and fail to find files.
+    video_path_abs = str(Path(video_path).resolve())
+    audio_path_abs = str(Path(audio_path).resolve())
+    output_path_abs = str(Path(output_path).resolve())
+    checkpoint_path_abs = str(Path(checkpoint_path).resolve())
 
-    # Build inference command
+    Path(output_path_abs).parent.mkdir(parents=True, exist_ok=True)
+
+    # Build inference command — all paths must be absolute
     cmd = [
         "python",
         str(wav2lip_path / "inference.py"),
-        "--checkpoint_path", checkpoint_path,
-        "--face", str(video_path),
-        "--audio", str(audio_path),
-        "--outfile", str(output_path),
+        "--checkpoint_path", checkpoint_path_abs,
+        "--face", video_path_abs,
+        "--audio", audio_path_abs,
+        "--outfile", output_path_abs,
         "--pads", str(pad_top), str(pad_bottom), str(pad_left), str(pad_right),
         "--resize_factor", str(resize_factor),
         "--wav2lip_batch_size", str(batch_size),
@@ -179,9 +187,9 @@ def run_lipsync(
         cmd.append("--nosmooth")
 
     logger.info(f"Running Wav2Lip inference...")
-    logger.info(f"  Video: {video_path}")
-    logger.info(f"  Audio: {audio_path}")
-    logger.info(f"  Model: {Path(checkpoint_path).name}")
+    logger.info(f"  Video: {video_path_abs}")
+    logger.info(f"  Audio: {audio_path_abs}")
+    logger.info(f"  Model: {Path(checkpoint_path_abs).name}")
     logger.info(f"  Batch size: {batch_size}")
     logger.debug(f"  Command: {' '.join(cmd)}")
 
@@ -205,15 +213,18 @@ def run_lipsync(
         elapsed = time.time() - start
         logger.info(f"Wav2Lip inference completed in {elapsed:.1f}s")
 
-        # Wav2Lip may save to a default location — move if needed
+        # Wav2Lip may save to its default location — check and move if needed
         default_output = wav2lip_path / "results" / "result_voice.mp4"
-        if default_output.exists() and str(default_output) != str(output_path):
-            shutil.move(str(default_output), str(output_path))
-            logger.info(f"Moved output to: {output_path}")
+        if not Path(output_path_abs).exists() and default_output.exists():
+            shutil.move(str(default_output), output_path_abs)
+            logger.info(f"Moved Wav2Lip output to: {output_path_abs}")
 
-        if not Path(output_path).exists():
+        if not Path(output_path_abs).exists():
+            # Log full stdout/stderr for debugging
+            logger.error(f"Wav2Lip stdout: {result.stdout[-1000:]}")
+            logger.error(f"Wav2Lip stderr: {result.stderr[-1000:]}")
             raise RuntimeError(
-                f"Wav2Lip completed but output file not found at {output_path}. "
+                f"Wav2Lip completed but output file not found at {output_path_abs}. "
                 f"Check Wav2Lip logs for details."
             )
 

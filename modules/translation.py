@@ -80,7 +80,7 @@ class Translator:
         """Translate using IndicTrans2.
 
         Args:
-            sentences: List of English sentences.
+            sentences: List of Kannada sentences.
 
         Returns:
             List of Hindi translated sentences.
@@ -208,7 +208,7 @@ class Translator:
         text: str,
         source_segments: Optional[List[Dict]] = None
     ) -> Dict:
-        """Translate text from English to Hindi.
+        """Translate text from Kannada to Hindi.
 
         For best results, pass the full paragraph — context-aware translation
         produces more natural Hindi than sentence-by-sentence.
@@ -284,7 +284,7 @@ class Translator:
         GPU memory usage for long video transcriptions.
 
         Args:
-            sentences: List of English sentences.
+            sentences: List of Kannada sentences.
             batch_size: Number of sentences per batch.
 
         Returns:

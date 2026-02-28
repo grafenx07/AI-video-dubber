@@ -171,7 +171,7 @@ python dub_video.py --input video.mp4 --translation indictrans2
 # Use Edge TTS (no GPU needed for TTS stage)
 python dub_video.py --input video.mp4 --tts edge
 
-# Adjust speech rate (Hindi is ~10% longer than English)
+# Adjust speech rate for better lip-sync
 python dub_video.py --input video.mp4 --speech-rate 1.1
 
 # Skip heavy stages for quick testing
@@ -322,7 +322,7 @@ with ProcessPoolExecutor(max_workers=num_gpus) as executor:
 | **XTTS v2** (not ElevenLabs) | Free, local, supports Hindi, voice cloning, fits on T4 |
 | **Audio alignment** module | The single biggest quality improvement — syncs lips to speech perfectly |
 | **GFPGAN post-processing** | Wav2Lip blurs the face; GFPGAN restores it to near-original quality |
-| **Speech rate 1.05x** | Hindi is typically 10-15% longer than English for same content |
+| **Speech rate 1.05x** | Hindi output may differ in length from Kannada; slight speedup keeps sync tight |
 | **Google Translate fallback** | IndicTrans2 needs ~4GB VRAM; having a zero-GPU Kannada→Hindi fallback shows resourcefulness |
 | **Edge TTS fallback** | Not everyone has GPU; edge-tts runs anywhere and still sounds professional |
 
