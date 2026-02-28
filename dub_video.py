@@ -82,6 +82,10 @@ class PipelineConfig:
         # Wav2Lip settings
         self.wav2lip_dir = args.wav2lip_dir
         self.wav2lip_batch_size = args.wav2lip_batch_size
+        self.wav2lip_resize_factor = getattr(args, 'wav2lip_resize_factor', 2)
+
+        # Video processing
+        self.target_fps = getattr(args, 'target_fps', 30)
 
         # Paths (auto-generated)
         self.clip_video = str(Path(self.output_dir) / "01_clip.mp4")
@@ -114,7 +118,8 @@ def step_1_extract_clip(config: PipelineConfig, logger: logging.Logger) -> str:
         start_time=config.start_time,
         end_time=config.end_time,
         output_path=config.clip_video,
-        reencode=True  # Frame-accurate for short clips
+        reencode=True,  # Frame-accurate for short clips
+        target_fps=config.target_fps  # Cap FPS (30 halves frame count for 60fps sources)
     )
 
     return clip_path
@@ -313,6 +318,7 @@ def step_7_lipsync(config: PipelineConfig, logger: logging.Logger) -> str:
             audio_path=config.hindi_audio_aligned,
             output_path=config.lipsynced_video,
             wav2lip_dir=config.wav2lip_dir,
+            resize_factor=config.wav2lip_resize_factor,
             batch_size=config.wav2lip_batch_size
         )
     except Exception as e:
@@ -528,11 +534,11 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Process 15-second clip (default: 0:15 - 0:30)
+  # Process 20-second clip (default: 0:10 - 0:30)
   python dub_video.py --input video.mp4
 
   # Custom time range
-  python dub_video.py --input video.mp4 --start 30 --end 45
+  python dub_video.py --input video.mp4 --start 30 --end 50
 
   # Use Google Translate (faster, no GPU needed for translation)
   python dub_video.py --input video.mp4 --translation google
@@ -555,8 +561,8 @@ Examples:
     # Time range
     parser.add_argument(
         "--start", "-s",
-        type=float, default=15.0,
-        help="Start time in seconds (default: 15)"
+        type=float, default=10.0,
+        help="Start time in seconds (default: 10)"
     )
     parser.add_argument(
         "--end", "-e",
@@ -626,6 +632,18 @@ Examples:
         "--wav2lip-batch-size",
         type=int, default=16,
         help="Wav2Lip batch size — lower for less VRAM (default: 16)"
+    )
+    parser.add_argument(
+        "--wav2lip-resize-factor",
+        type=int, default=2,
+        help="Downscale factor for Wav2Lip face detection (default: 2 for 1080p)"
+    )
+
+    # Video processing
+    parser.add_argument(
+        "--target-fps",
+        type=float, default=30,
+        help="Cap output FPS (default: 30). Halves frame count for 60fps sources."
     )
 
     return parser.parse_args()

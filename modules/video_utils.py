@@ -179,7 +179,8 @@ def extract_clip(
     start_time: float,
     end_time: float,
     output_path: str,
-    reencode: bool = True
+    reencode: bool = True,
+    target_fps: Optional[float] = None
 ) -> str:
     """Extract a time-bounded segment from a video.
 
@@ -190,6 +191,9 @@ def extract_clip(
         output_path: Path for the output clip.
         reencode: If True, re-encode for frame accuracy. If False, use
                   stream copy (faster but may have keyframe misalignment).
+        target_fps: If set, cap output framerate (e.g. 30). This halves
+                    frame count for 60fps sources, making Wav2Lip and
+                    GFPGAN 2× faster while looking identical.
 
     Returns:
         Path to the extracted clip.
@@ -217,8 +221,12 @@ def extract_clip(
             "-c:a", "aac",
             "-b:a", "192k",
             "-avoid_negative_ts", "make_zero",
-            str(output_path)
         ]
+        # Cap framerate if requested (e.g. 60fps → 30fps halves frame count)
+        if target_fps:
+            cmd.extend(["-r", str(int(target_fps))])
+            logger.info(f"  Capping output FPS to {int(target_fps)}")
+        cmd.append(str(output_path))
     else:
         # Stream copy — fast but may be inaccurate at boundaries
         cmd = [
