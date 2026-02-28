@@ -167,7 +167,16 @@ class VoiceCloner:
 
         Returns:
             Path to the generated audio file.
+
+        Raises:
+            ValueError: If text is empty.
         """
+        if not text or not text.strip():
+            raise ValueError(
+                "Cannot synthesize empty text. The transcription/translation "
+                "pipeline returned no text. Check Whisper transcription output."
+            )
+
         Path(output_path).parent.mkdir(parents=True, exist_ok=True)
 
         if self.method == "edge":

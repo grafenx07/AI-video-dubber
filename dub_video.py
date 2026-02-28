@@ -172,6 +172,17 @@ def step_3_transcribe(config: PipelineConfig, logger: logging.Logger) -> dict:
     logger.info(f"  Transcript: {transcription['text']}")
     logger.info(f"  Segments: {len(transcription['segments'])}")
 
+    # Validate: pipeline cannot continue with empty transcription
+    if not transcription["text"].strip():
+        raise RuntimeError(
+            "Whisper transcription returned empty text after all retry attempts.\n"
+            "Possible causes:\n"
+            "  1. Audio may be silence, music, or very noisy\n"
+            "  2. Try a larger model: --whisper-model medium\n"
+            "  3. Try a different time range: --start X --end Y\n"
+            "  4. Check that the audio file has speech: outputs/02_audio.wav"
+        )
+
     return transcription
 
 

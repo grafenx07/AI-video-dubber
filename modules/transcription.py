@@ -68,7 +68,7 @@ class Transcriber:
 
         Args:
             audio_path: Path to audio file (WAV, MP3, etc.).
-            language: Language code (e.g., 'en', 'hi').
+            language: Language code (e.g., 'kn', 'hi', 'en').
             word_timestamps: Enable word-level timestamps.
             initial_prompt: Optional context prompt for better accuracy.
 
@@ -92,12 +92,62 @@ class Transcriber:
             verbose=False
         )
 
+        text = result["text"].strip()
+
+        # ── Retry Strategy ──────────────────────────────────────────
+        # Whisper's Kannada (kn) support is weak on smaller models.
+        # If transcription is empty, retry:
+        #   1) Let Whisper auto-detect the language
+        #   2) Try Hindi (hi) — Whisper sometimes confuses Indic languages
+        # This ensures we always get *some* text for the pipeline.
+        if not text and language == "kn":
+            logger.warning("Kannada transcription returned empty text. "
+                           "Retrying with auto-detect...")
+            result = self.model.transcribe(
+                str(audio_path),
+                language=None,  # Let Whisper auto-detect
+                word_timestamps=word_timestamps,
+                initial_prompt=initial_prompt,
+                verbose=False
+            )
+            text = result["text"].strip()
+            if text:
+                logger.info(f"Auto-detect succeeded! Detected language: "
+                            f"{result.get('language', 'unknown')}")
+
+        if not text:
+            logger.warning("Auto-detect also empty. Trying Hindi (hi)...")
+            result = self.model.transcribe(
+                str(audio_path),
+                language="hi",
+                word_timestamps=word_timestamps,
+                initial_prompt=initial_prompt,
+                verbose=False
+            )
+            text = result["text"].strip()
+            if text:
+                logger.info(f"Hindi transcription succeeded: {text[:80]}...")
+
+        if not text:
+            logger.warning("All transcription attempts returned empty. "
+                           "Trying with no language hint and task=translate...")
+            result = self.model.transcribe(
+                str(audio_path),
+                task="translate",  # Translate to English first
+                word_timestamps=word_timestamps,
+                verbose=False
+            )
+            text = result["text"].strip()
+            if text:
+                logger.info(f"Translation-mode transcription: {text[:80]}...")
+        # ── End Retry Strategy ──────────────────────────────────────
+
         elapsed = time.time() - start
         logger.info(f"Transcription completed in {elapsed:.1f}s")
 
         # Structure the output for downstream consumption
         transcription = {
-            "text": result["text"].strip(),
+            "text": text,
             "language": result.get("language", language),
             "segments": [],
             "word_segments": []
