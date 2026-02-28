@@ -30,6 +30,16 @@ import torch
 
 logger = logging.getLogger(__name__)
 
+# ── Check if Coqui TTS is available (not on Python 3.12+) ──
+XTTS_AVAILABLE = False
+try:
+    from TTS.api import TTS as _TTS_Check
+    XTTS_AVAILABLE = True
+    del _TTS_Check  # Clean up — actual load is lazy in _load_xtts()
+except ImportError:
+    logger.warning("Coqui TTS not installed (Python 3.12+ incompatible). "
+                   "XTTS voice cloning disabled — Edge TTS will be used as fallback.")
+
 
 class VoiceCloner:
     """XTTS v2 based voice cloning for Hindi speech synthesis."""
@@ -48,18 +58,31 @@ class VoiceCloner:
             speech_rate: Speed multiplier. >1.0 = faster, <1.0 = slower.
                          1.05 is recommended for Hindi (may differ in length from Kannada).
         """
-        self.method = method
         self.device = device or ("cuda" if torch.cuda.is_available() else "cpu")
         self.speech_rate = speech_rate
         self._model = None
 
-        logger.info(f"VoiceCloner initialized: method={method}, device={self.device}, "
+        # Auto-fallback: if XTTS requested but Coqui not installed, switch to edge
+        if method == "xtts" and not XTTS_AVAILABLE:
+            logger.warning("XTTS requested but Coqui TTS not installed. "
+                           "Falling back to Edge TTS.")
+            self.method = "edge"
+        else:
+            self.method = method
+
+        logger.info(f"VoiceCloner initialized: method={self.method}, device={self.device}, "
                      f"speech_rate={speech_rate}")
 
     def _load_xtts(self):
         """Load the XTTS v2 model."""
         if self._model is not None:
             return
+
+        if not XTTS_AVAILABLE:
+            raise RuntimeError(
+                "Coqui TTS is not installed. Install it with: "
+                "pip install coqui-tts  (or use --tts edge)"
+            )
 
         from TTS.api import TTS
 

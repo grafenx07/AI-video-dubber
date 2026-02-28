@@ -611,6 +611,16 @@ if __name__ == "__main__":
     args = parse_args()
     logger = setup_logging()
 
+    # Auto-detect TTS availability (Coqui TTS doesn't support Python 3.12+)
+    if args.tts == "xtts":
+        try:
+            from TTS.api import TTS as _TTS_Check
+            logger.info("XTTS v2 available — using voice cloning")
+        except ImportError:
+            logger.warning("⚠️  Coqui TTS not installed (Python 3.12+ incompatible)")
+            logger.warning("⚠️  Automatically switching to Edge TTS (still high quality)")
+            args.tts = "edge"
+
     # Validate input
     if not Path(args.input).exists():
         logger.error(f"Input video not found: {args.input}")
