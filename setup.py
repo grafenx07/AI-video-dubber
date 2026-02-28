@@ -54,12 +54,17 @@ def install_torch_cuda():
 
 
 def _patch_wav2lip_numpy(wav2lip_dir):
-    """Patch Wav2Lip source files for numpy >= 1.24 compatibility.
+    """Patch Wav2Lip source files for numpy >= 1.24 and librosa >= 0.10 compatibility.
 
     np.float, np.int, np.complex were deprecated in numpy 1.20 and
     removed in numpy 1.24. Wav2Lip's code uses np.float in audio.py
     and potentially other files. This patches them to np.float64.
+
+    librosa >= 0.10 changed filters.mel() to keyword-only arguments.
+    Wav2Lip passes (sr, n_fft, ...) as positional which now fails.
     """
+    import re
+
     files_to_patch = [
         wav2lip_dir / "audio.py",
         wav2lip_dir / "models" / "wav2lip.py",
@@ -74,9 +79,18 @@ def _patch_wav2lip_numpy(wav2lip_dir):
         patched = patched.replace("np.float,", "np.float64,")
         patched = patched.replace("np.int)", "np.int64)")
         patched = patched.replace("np.int,", "np.int64,")
+
+        # Fix librosa.filters.mel() positional args (librosa >= 0.10)
+        mel_pattern = r'librosa\.filters\.mel\(\s*hp\.sample_rate\s*,\s*hp\.n_fft\s*,'
+        patched = re.sub(
+            mel_pattern,
+            'librosa.filters.mel(sr=hp.sample_rate, n_fft=hp.n_fft,',
+            patched
+        )
+
         if patched != content:
             fpath.write_text(patched, encoding="utf-8")
-            print(f"  ✅ Patched {fpath} for numpy compatibility")
+            print(f"  ✅ Patched {fpath} for numpy + librosa compatibility")
 
 
 def setup_wav2lip():

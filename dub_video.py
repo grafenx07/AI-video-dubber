@@ -306,15 +306,28 @@ def step_7_lipsync(config: PipelineConfig, logger: logging.Logger) -> str:
         )
         return config.lipsynced_video
 
-    lipsynced = run_lipsync(
-        video_path=config.clip_video,
-        audio_path=config.hindi_audio_aligned,
-        output_path=config.lipsynced_video,
-        wav2lip_dir=config.wav2lip_dir,
-        batch_size=config.wav2lip_batch_size
-    )
+    lipsynced = None
+    try:
+        lipsynced = run_lipsync(
+            video_path=config.clip_video,
+            audio_path=config.hindi_audio_aligned,
+            output_path=config.lipsynced_video,
+            wav2lip_dir=config.wav2lip_dir,
+            batch_size=config.wav2lip_batch_size
+        )
+    except Exception as e:
+        logger.warning(f"Wav2Lip inference failed: {e}")
+        logger.warning("Falling back to audio-only merge (video keeps original lips).")
 
-    return lipsynced
+    if not lipsynced or not Path(config.lipsynced_video).exists():
+        from modules.video_utils import merge_audio_video
+        merge_audio_video(
+            config.clip_video,
+            config.hindi_audio_aligned,
+            config.lipsynced_video
+        )
+
+    return config.lipsynced_video
 
 
 def step_8_enhance(config: PipelineConfig, logger: logging.Logger) -> str:
