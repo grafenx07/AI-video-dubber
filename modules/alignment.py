@@ -91,7 +91,7 @@ def time_stretch_audio(
     output_path: str,
     target_duration: float,
     max_stretch_ratio: float = 1.35,
-    min_stretch_ratio: float = 0.70
+    min_stretch_ratio: float = 0.55
 ) -> str:
     """Time-stretch audio to match a target duration.
 

@@ -24,6 +24,22 @@ Model Options:
     - Both are free and open-source
 """
 
+# ── Monkey-patch for newer torchvision (>= 0.18) ──────────────────
+# torchvision.transforms.functional_tensor was removed in v0.18+.
+# GFPGAN/basicsr still import it, causing ModuleNotFoundError.
+# Redirect the old module path to the current one.
+import sys as _sys
+try:
+    import torchvision.transforms.functional_tensor  # noqa: F401
+except ModuleNotFoundError:
+    try:
+        import torchvision.transforms.functional as _F
+        _sys.modules["torchvision.transforms.functional_tensor"] = _F
+    except ImportError:
+        pass  # torchvision not installed at all
+except ImportError:
+    pass
+
 import logging
 import os
 import shutil

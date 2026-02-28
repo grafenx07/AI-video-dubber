@@ -128,18 +128,19 @@ class Translator:
 
         return translations
 
-    def _translate_google(self, sentences: List[str]) -> List[str]:
+    def _translate_google(self, sentences: List[str], source_lang: str = "kn") -> List[str]:
         """Translate using Google Translate via deep_translator (free).
 
         Args:
-            sentences: List of Kannada sentences.
+            sentences: List of source sentences.
+            source_lang: Source language code ('en', 'kn', 'hi', etc.).
 
         Returns:
             List of Hindi translated sentences.
         """
         from deep_translator import GoogleTranslator
 
-        translator = GoogleTranslator(source="kn", target="hi")
+        translator = GoogleTranslator(source=source_lang, target="hi")
 
         translations = []
         for sentence in sentences:
@@ -206,26 +207,37 @@ class Translator:
     def translate(
         self,
         text: str,
-        source_segments: Optional[List[Dict]] = None
+        source_segments: Optional[List[Dict]] = None,
+        source_lang: str = "kn"
     ) -> Dict:
-        """Translate text from Kannada to Hindi.
+        """Translate text to Hindi.
 
         For best results, pass the full paragraph — context-aware translation
         produces more natural Hindi than sentence-by-sentence.
 
         Args:
-            text: Full Kannada text to translate.
+            text: Source text to translate.
             source_segments: Optional list of segments with timestamps.
                              If provided, each segment is translated individually
                              to preserve timing correlation.
+            source_lang: Source language code. 'en' when Whisper translate mode
+                         was used (→ English), 'kn' for native Kannada script.
 
         Returns:
             Dictionary with:
                 - 'full_text': Complete Hindi translation
                 - 'segments': Per-segment translations (if source_segments given)
         """
-        logger.info(f"Translating {len(text)} chars to Hindi via {self.method}")
+        logger.info(f"Translating {len(text)} chars ({source_lang}→hi) via {self.method}")
         start = time.time()
+
+        # IndicTrans2 and SeamlessM4T expect Kannada input only.
+        # If source is English (from Whisper translate mode), use Google Translate.
+        effective_method = self.method
+        if source_lang not in ("kn",) and effective_method in ("indictrans2", "seamless"):
+            logger.info(f"Source is '{source_lang}' — using Google Translate "
+                        f"instead of {effective_method}")
+            effective_method = "google"
 
         result = {"full_text": "", "segments": []}
 
@@ -234,12 +246,12 @@ class Translator:
             sentences = [seg["text"] for seg in source_segments]
 
             # Batch translate all sentences at once for context
-            if self.method == "indictrans2":
+            if effective_method == "indictrans2":
                 translations = self._translate_indictrans2(sentences)
-            elif self.method == "seamless":
+            elif effective_method == "seamless":
                 translations = self._translate_seamless(sentences)
             else:
-                translations = self._translate_google(sentences)
+                translations = self._translate_google(sentences, source_lang=source_lang)
 
             for seg, hindi_text in zip(source_segments, translations):
                 result["segments"].append({
@@ -258,12 +270,12 @@ class Translator:
             if not sentences:
                 sentences = [text]
 
-            if self.method == "indictrans2":
+            if effective_method == "indictrans2":
                 translations = self._translate_indictrans2(sentences)
-            elif self.method == "seamless":
+            elif effective_method == "seamless":
                 translations = self._translate_seamless(sentences)
             else:
-                translations = self._translate_google(sentences)
+                translations = self._translate_google(sentences, source_lang=source_lang)
 
             result["full_text"] = " ".join(translations)
 

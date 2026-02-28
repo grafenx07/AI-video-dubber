@@ -97,7 +97,7 @@ class VoiceCloner:
         elapsed = time.time() - start
         logger.info(f"XTTS v2 loaded in {elapsed:.1f}s on {self.device}")
 
-    def _split_hindi_text(self, text: str, max_chars: int = 200) -> List[str]:
+    def _split_hindi_text(self, text: str, max_chars: int = 140) -> List[str]:
         """Split Hindi text into chunks suitable for TTS.
 
         XTTS works best with shorter sentences. This splits on natural

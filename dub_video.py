@@ -187,19 +187,23 @@ def step_3_transcribe(config: PipelineConfig, logger: logging.Logger) -> dict:
 
 
 def step_4_translate(config: PipelineConfig, logger: logging.Logger, transcription: dict) -> dict:
-    """Step 4: Translate Kannada to Hindi."""
+    """Step 4: Translate to Hindi."""
     from modules.translation import Translator
+
+    source_lang = transcription.get("source_language", "kn")
 
     logger.info("=" * 60)
     logger.info("STEP 4: Translating to Hindi")
     logger.info(f"  Method: {config.translation_method}")
+    logger.info(f"  Source language: {source_lang}")
     logger.info("=" * 60)
 
     translator = Translator(method=config.translation_method)
 
     translation = translator.translate(
         text=transcription["text"],
-        source_segments=transcription["segments"]
+        source_segments=transcription["segments"],
+        source_lang=source_lang
     )
 
     # Save translation
