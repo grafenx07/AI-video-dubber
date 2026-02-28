@@ -60,7 +60,7 @@ class Transcriber:
     def transcribe(
         self,
         audio_path: str,
-        language: str = "en",
+        language: str = "kn",
         word_timestamps: bool = True,
         initial_prompt: Optional[str] = None
     ) -> Dict[str, Any]:
@@ -131,7 +131,7 @@ class Transcriber:
         audio_path: str,
         chunk_duration: float = 30.0,
         overlap: float = 2.0,
-        language: str = "en"
+        language: str = "kn"
     ) -> Dict[str, Any]:
         """Transcribe long audio by splitting into overlapping chunks.
 

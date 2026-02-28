@@ -5,10 +5,10 @@ AI Video Dubber — Hindi Dubbing Pipeline
 Main orchestrator that chains all modules into a complete dubbing pipeline.
 
 Pipeline:
-    Input Video → Extract Clip → Extract Audio → Whisper Transcription
-    → IndicTrans2/Google Translation → XTTS Voice Cloning
+    Input Video (Kannada) → Extract Clip → Extract Audio → Whisper Transcription
+    → IndicTrans2/Google Translation (Kannada→Hindi) → XTTS Voice Cloning
     → Audio Duration Alignment → Wav2Lip Lip Sync → GFPGAN Enhancement
-    → Final Output Video
+    → Final Output Video (Hindi)
 
 Usage:
     python dub_video.py --input video.mp4 --start 15 --end 30
@@ -143,14 +143,14 @@ def step_3_transcribe(config: PipelineConfig, logger: logging.Logger) -> dict:
     from modules.transcription import Transcriber
 
     logger.info("=" * 60)
-    logger.info("STEP 3: Transcribing English speech (Whisper)")
+    logger.info("STEP 3: Transcribing Kannada speech (Whisper)")
     logger.info(f"  Model: {config.whisper_model}")
     logger.info("=" * 60)
 
     transcriber = Transcriber(model_size=config.whisper_model)
     transcription = transcriber.transcribe(
         audio_path=config.clip_audio,
-        language="en",
+        language="kn",
         word_timestamps=True
     )
 
@@ -164,7 +164,7 @@ def step_3_transcribe(config: PipelineConfig, logger: logging.Logger) -> dict:
 
 
 def step_4_translate(config: PipelineConfig, logger: logging.Logger, transcription: dict) -> dict:
-    """Step 4: Translate English to Hindi."""
+    """Step 4: Translate Kannada to Hindi."""
     from modules.translation import Translator
 
     logger.info("=" * 60)
@@ -477,7 +477,7 @@ def estimate_cost_per_minute(
 def parse_args():
     """Parse command-line arguments."""
     parser = argparse.ArgumentParser(
-        description="AI Video Dubber — English to Hindi Video Dubbing Pipeline",
+        description="AI Video Dubber — Kannada to Hindi Video Dubbing Pipeline",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:

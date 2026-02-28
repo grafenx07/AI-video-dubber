@@ -1,6 +1,6 @@
-# 🎬 AI Video Dubber — English to Hindi Dubbing Pipeline
+# 🎬 AI Video Dubber — Kannada to Hindi Dubbing Pipeline
 
-A modular, production-ready Python pipeline that takes an English video and produces a Hindi-dubbed version with **voice cloning**, **lip synchronization**, and **face restoration** — all using **free, open-source tools**.
+A modular, production-ready Python pipeline that takes a Kannada video and produces a Hindi-dubbed version with **voice cloning**, **lip synchronization**, and **face restoration** — all using **free, open-source tools**.
 
 > **Built for the Supernan AI Automation Intern Challenge**
 > "The Golden 15 Seconds" — 15 seconds of perfection.
@@ -14,8 +14,8 @@ dub_video.py                 ← Main orchestrator with CLI
 │
 ├── modules/
 │   ├── video_utils.py       ← FFmpeg-based video/audio I/O
-│   ├── transcription.py     ← Whisper speech-to-text
-│   ├── translation.py       ← IndicTrans2 / Google Translate
+│   ├── transcription.py     ← Whisper speech-to-text (Kannada)
+│   ├── translation.py       ← IndicTrans2 / Google Translate (Kannada→Hindi)
 │   ├── tts.py               ← XTTS v2 voice cloning
 │   ├── alignment.py         ← Audio duration matching
 │   ├── lipsync.py           ← Wav2Lip lip synchronization
@@ -41,11 +41,11 @@ Input Video (full)
 └─────────┬───────────┘
           ↓
 ┌─────────────────────┐
-│ 3. Transcribe       │  ← OpenAI Whisper (word timestamps)
+│ 3. Transcribe       │  ← OpenAI Whisper (Kannada, word timestamps)
 └─────────┬───────────┘
           ↓
 ┌─────────────────────┐
-│ 4. Translate to     │  ← IndicTrans2 (context-aware)
+│ 4. Translate to     │  ← IndicTrans2 (Kannada→Hindi, context-aware)
 │    Hindi            │     or Google Translate (fallback)
 └─────────┬───────────┘
           ↓
@@ -214,8 +214,8 @@ After running the pipeline, `outputs/` will contain:
 ```
 outputs/
 ├── 01_clip.mp4              ← Extracted 15-second clip
-├── 02_audio.wav             ← Original English audio
-├── 03_transcription.json    ← Whisper transcription + timestamps
+├── 02_audio.wav             ← Original Kannada audio
+├── 03_transcription.json    ← Whisper transcription (Kannada) + timestamps
 ├── 04_translation.json      ← Hindi translation + segments
 ├── 05_hindi_raw.wav         ← Generated Hindi speech
 ├── 06_hindi_aligned.wav     ← Duration-matched Hindi audio
@@ -317,13 +317,13 @@ with ProcessPoolExecutor(max_workers=num_gpus) as executor:
 
 | Decision | Why |
 |----------|-----|
-| **Whisper small** (not base) | Best accuracy/VRAM trade-off for free Colab T4 |
-| **IndicTrans2** (not Google) | Context-aware Hindi > literal translation. A nanny would understand it. |
+| **Whisper small** (not base) | Best accuracy/VRAM trade-off for free Colab T4. Whisper supports Kannada transcription. |
+| **IndicTrans2** (not Google) | Context-aware Kannada→Hindi > literal translation. A nanny would understand it. |
 | **XTTS v2** (not ElevenLabs) | Free, local, supports Hindi, voice cloning, fits on T4 |
 | **Audio alignment** module | The single biggest quality improvement — syncs lips to speech perfectly |
 | **GFPGAN post-processing** | Wav2Lip blurs the face; GFPGAN restores it to near-original quality |
 | **Speech rate 1.05x** | Hindi is typically 10-15% longer than English for same content |
-| **Google Translate fallback** | IndicTrans2 needs ~4GB VRAM; having a zero-GPU fallback shows resourcefulness |
+| **Google Translate fallback** | IndicTrans2 needs ~4GB VRAM; having a zero-GPU Kannada→Hindi fallback shows resourcefulness |
 | **Edge TTS fallback** | Not everyone has GPU; edge-tts runs anywhere and still sounds professional |
 
 ---
@@ -334,7 +334,7 @@ with ProcessPoolExecutor(max_workers=num_gpus) as executor:
 2. **XTTS Hindi prosody**: Voice cloning works well but may not perfectly capture emotional nuances
 3. **Single speaker**: Current pipeline assumes one speaker; multi-speaker support needs diarization
 4. **Colab timeout**: Free Colab disconnects after ~90 minutes; long videos need batching with checkpoints
-5. **Translation context**: Short clips may lose context; full-transcript translation is better
+5. **Translation context**: Short clips may lose Kannada context; full-transcript translation is better
 
 ---
 

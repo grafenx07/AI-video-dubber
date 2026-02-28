@@ -1,10 +1,10 @@
 """
 Translation Module (IndicTrans2 + Fallback)
 ============================================
-English → Hindi translation using AI4Bharat's IndicTrans2 model.
+Kannada → Hindi translation using AI4Bharat's IndicTrans2 model.
 
 Architecture:
-    - Primary: IndicTrans2 (ai4bharat/indictrans2-en-indic-1B) — best quality, free
+    - Primary: IndicTrans2 (ai4bharat/indictrans2-indic-indic-1B) — best quality, free
     - Fallback: Deep Translator (Google Translate API) — no GPU needed, free tier
     - Both support batch processing for long documents
 
@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 
 
 class Translator:
-    """English to Hindi translator with IndicTrans2 and fallback support."""
+    """Kannada to Hindi translator with IndicTrans2 and fallback support."""
 
     def __init__(self, method: str = "indictrans2", device: Optional[str] = None):
         """Initialize the translator.
@@ -50,7 +50,7 @@ class Translator:
             from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
             from IndicTransToolkit import IndicProcessor
 
-            model_name = "ai4bharat/indictrans2-en-indic-1B"
+            model_name = "ai4bharat/indictrans2-indic-indic-1B"
 
             logger.info(f"Loading IndicTrans2 model: {model_name}")
             start = time.time()
@@ -89,7 +89,7 @@ class Translator:
 
         self._load_indictrans2()
 
-        src_lang = "eng_Latn"
+        src_lang = "kan_Knda"
         tgt_lang = "hin_Deva"
 
         # Preprocess with IndicProcessor
@@ -132,14 +132,14 @@ class Translator:
         """Translate using Google Translate via deep_translator (free).
 
         Args:
-            sentences: List of English sentences.
+            sentences: List of Kannada sentences.
 
         Returns:
             List of Hindi translated sentences.
         """
         from deep_translator import GoogleTranslator
 
-        translator = GoogleTranslator(source="en", target="hi")
+        translator = GoogleTranslator(source="kn", target="hi")
 
         translations = []
         for sentence in sentences:
@@ -160,7 +160,7 @@ class Translator:
         """Translate using Meta's SeamlessM4T model (free, good quality).
 
         Args:
-            sentences: List of English sentences.
+            sentences: List of Kannada sentences.
 
         Returns:
             List of Hindi translated sentences.
@@ -186,7 +186,7 @@ class Translator:
                 continue
 
             inputs = self._processor(
-                text=sentence, src_lang="eng", return_tensors="pt"
+                text=sentence, src_lang="kan", return_tensors="pt"
             ).to(self.device)
 
             with torch.no_grad():
@@ -214,7 +214,7 @@ class Translator:
         produces more natural Hindi than sentence-by-sentence.
 
         Args:
-            text: Full English text to translate.
+            text: Full Kannada text to translate.
             source_segments: Optional list of segments with timestamps.
                              If provided, each segment is translated individually
                              to preserve timing correlation.
