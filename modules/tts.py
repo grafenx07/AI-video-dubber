@@ -232,9 +232,17 @@ class VoiceCloner:
 
                 all_audio.append(wav)
 
-                # Small pause between chunks for natural prosody
-                pause = np.zeros(int(0.15 * 24000))  # 150ms pause at 24kHz
-                all_audio.append(pause)
+                # Short fade-smoothed silence between chunks — hard zeros cause
+                # audible clicks/pops; a 5ms fade-out + 5ms fade-in eliminates them.
+                silence_len = int(0.12 * 24000)   # 120ms total gap
+                fade_len = int(0.005 * 24000)      # 5ms fade
+                silence = np.zeros(silence_len)
+                if len(wav) >= fade_len:
+                    # fade out tail of last chunk into silence
+                    fade_out = np.linspace(1.0, 0.0, fade_len)
+                    wav[-fade_len:] = wav[-fade_len:] * fade_out
+                    all_audio[-1] = wav
+                all_audio.append(silence)
 
             except Exception as e:
                 logger.error(f"Failed to synthesize chunk {i + 1}: {e}")
@@ -245,6 +253,16 @@ class VoiceCloner:
 
         # Concatenate all chunks
         final_audio = np.concatenate(all_audio)
+
+        # Normalize audio to a consistent RMS level (-20 dBFS target)
+        # This removes loudness differences between XTTS runs and eliminates
+        # the "muffled" or "too quiet / too loud" problems in the output.
+        rms = np.sqrt(np.mean(final_audio ** 2))
+        if rms > 1e-6:  # avoid division by zero on silence
+            target_rms = 0.1   # roughly -20 dBFS
+            final_audio = final_audio * (target_rms / rms)
+            # Hard-clip to prevent digital overload after normalization
+            final_audio = np.clip(final_audio, -0.98, 0.98)
 
         # Apply speech rate adjustment
         if abs(self.speech_rate - 1.0) > 0.01:

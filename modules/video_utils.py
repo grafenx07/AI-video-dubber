@@ -218,6 +218,7 @@ def extract_clip(
             "-c:v", "libx264",
             "-preset", "medium",
             "-crf", "18",          # High quality
+            "-pix_fmt", "yuv420p",  # Universal H.264 compatibility
             "-c:a", "aac",
             "-b:a", "192k",
             "-avoid_negative_ts", "make_zero",

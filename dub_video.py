@@ -141,13 +141,14 @@ def step_2_extract_audio(config: PipelineConfig, logger: logging.Logger) -> str:
         mono=True
     )
 
-    # Also extract at 22050Hz for XTTS voice cloning reference
-    # (higher sample rate = better voice quality for cloning)
-    config.reference_audio = str(Path(config.output_dir) / "02_reference_22k.wav")
+    # Also extract at 24kHz for XTTS voice cloning reference
+    # (XTTS v2 uses 24kHz natively — matching the native rate produces the
+    # cleanest voice clone and avoids resampling artefacts in the model)
+    config.reference_audio = str(Path(config.output_dir) / "02_reference_24k.wav")
     extract_audio(
         video_path=config.clip_video,
         audio_path=config.reference_audio,
-        sample_rate=22050,  # XTTS native rate
+        sample_rate=24000,  # XTTS v2 native sample rate
         mono=True
     )
     logger.info(f"  Reference audio for voice cloning: {config.reference_audio}")

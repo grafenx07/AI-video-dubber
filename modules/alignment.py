@@ -143,11 +143,18 @@ def time_stretch_audio(
     target_samples = int(target_duration * sr)
 
     if len(y_stretched) > target_samples:
-        # Trim excess
+        # Trim excess — add a short fade-out to avoid a hard cut click
+        fade_len = min(int(0.005 * sr), len(y_stretched) - target_samples, target_samples)
+        if fade_len > 0:
+            y_stretched[target_samples - fade_len:target_samples] *= np.linspace(1.0, 0.0, fade_len)
         y_stretched = y_stretched[:target_samples]
     elif len(y_stretched) < target_samples:
-        # Pad with silence
-        padding = np.zeros(target_samples - len(y_stretched))
+        # Pad with silence — fade the tail into zero to avoid a click at the join
+        pad_len = target_samples - len(y_stretched)
+        fade_len = min(int(0.005 * sr), len(y_stretched))  # 5ms fade
+        if fade_len > 0:
+            y_stretched[-fade_len:] *= np.linspace(1.0, 0.0, fade_len)
+        padding = np.zeros(pad_len)
         y_stretched = np.concatenate([y_stretched, padding])
 
     Path(output_path).parent.mkdir(parents=True, exist_ok=True)

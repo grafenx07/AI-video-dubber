@@ -211,10 +211,12 @@ class FaceEnhancer:
         # Create temporary output directory
         temp_dir = Path(output_video).parent / "temp_enhanced_frames"
         temp_dir.mkdir(parents=True, exist_ok=True)
-        temp_video = str(Path(output_video).parent / "temp_enhanced_noaudio.mp4")
+        # Use AVI/XVID for the OpenCV intermediate file — mp4v produces MPEG-4 Part 2
+        # which is not H.264 and causes browser/player playback failures.
+        temp_video = str(Path(output_video).parent / "temp_enhanced_noaudio.avi")
 
         # Write enhanced frames
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        fourcc = cv2.VideoWriter_fourcc(*"XVID")
         writer = cv2.VideoWriter(temp_video, fourcc, fps, (out_width, out_height))
 
         frame_count = 0
@@ -264,16 +266,23 @@ class FaceEnhancer:
                     "-vn", "-acodec", "copy", audio_source
                 ], stdout=subprocess.PIPE, stderr=subprocess.PIPE, timeout=60)
 
-        # Mux enhanced video + audio
+        # Mux enhanced video + audio — use libx264 with yuv420p for universal
+        # browser/player compatibility. Add audio filters to reduce noise:
+        #   aresample=async=1  — fix any A/V timing drift
+        #   highpass=f=80      — cut sub-80 Hz rumble/hum
+        #   lowpass=f=16000    — cut high-freq TTS artifacts
+        #   dynaudnorm         — normalize loudness for consistent volume
         mux_cmd = [
             "ffmpeg", "-y",
             "-i", temp_video,
             "-i", str(audio_source),
             "-c:v", "libx264",
-            "-preset", "ultrafast",
-            "-crf", "23",
+            "-preset", "medium",
+            "-crf", "18",
+            "-pix_fmt", "yuv420p",
             "-c:a", "aac",
             "-b:a", "192k",
+            "-af", "aresample=async=1:first_pts=0,highpass=f=80,lowpass=f=16000,dynaudnorm=g=5",
             "-map", "0:v:0",
             "-map", "1:a:0",
             "-shortest",
@@ -338,8 +347,8 @@ class FaceEnhancer:
         out_width = width * self.upscale
         out_height = height * self.upscale
 
-        temp_video = str(Path(output_video).parent / "temp_fast_enhanced.mp4")
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+        temp_video = str(Path(output_video).parent / "temp_fast_enhanced.avi")
+        fourcc = cv2.VideoWriter_fourcc(*"XVID")
         writer = cv2.VideoWriter(temp_video, fourcc, fps, (out_width, out_height))
 
         frame_idx = 0
